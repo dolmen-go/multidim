@@ -11,10 +11,13 @@ import (
 
 // Init allocates a multidimensional slice and initializes it.
 //
-// Allocation is handled.
+// The size of each dimension to initialize must be given
+// (but no dimension also works and initializes the single value *target).
 //
 // If build is not nil, it is used to initialize each cell.
-// build is either (1) a direct value or (2) a function producing each cell value.
+// build is either (1) a direct value, (2) an anonymous function producing
+// each cell value (func() cellT), or (3) an anonmymous function initializing
+// each cell (func(&cellT)).
 func Init(target interface{}, build interface{}, dimensions ...int) {
 	nbDim := len(dimensions)
 	targetV := reflect.ValueOf(&target).Elem().Elem()
