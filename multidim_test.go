@@ -65,6 +65,20 @@ func ExampleInit_square() {
 	// [[4 4] [4 4]]
 }
 
+func ExampleInit_rectangle() {
+	var rect [][]int
+
+	multidim.Init(&rect, nil, 3, 2)
+	fmt.Println(rect)
+
+	multidim.Init(&rect, nil, 2, 3)
+	fmt.Println(rect)
+
+	// Output:
+	// [[0 0] [0 0] [0 0]]
+	// [[0 0 0] [0 0 0]]
+}
+
 func ExampleInit_cube() {
 	var cube [][][]int
 	multidim.Init(&cube, 8, 2, 2, 2)
