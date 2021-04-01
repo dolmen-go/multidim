@@ -79,6 +79,27 @@ func ExampleInit_rectangle() {
 	// [[0 0 0] [0 0 0]]
 }
 
+func ExampleInit_func() {
+	var a [][]int
+
+	multidim.Init(&a, func(i, j int) int {
+		return 2*i + j + 1
+	}, 3, 2)
+
+	fmt.Println(a)
+
+	var r [][]string
+
+	multidim.Init(&r, func(i, j int) string {
+		return "foobar"[i*3+j : i*3+j+1]
+	}, 2, 3)
+
+	fmt.Println(r)
+	// Output:
+	// [[1 2] [3 4] [5 6]]
+	// [[f o o] [b a r]]
+}
+
 func ExampleInit_cube() {
 	var cube [][][]int
 	multidim.Init(&cube, 8, 2, 2, 2)

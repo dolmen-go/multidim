@@ -23,6 +23,10 @@ import (
 	"reflect"
 )
 
+var (
+	intType = reflect.TypeOf(int(0))
+)
+
 // Init allocates a multidimensional slice and initializes it.
 //
 // The size of each dimension to initialize must be given
@@ -95,26 +99,93 @@ func Init(target interface{}, build interface{}, dimensions ...int) {
 		buildT := buildV.Type()
 		if buildT.Kind() == reflect.Func && buildT.Name() == "" {
 			numOut := buildT.NumOut()
-			if buildT.NumIn() == 0 {
-				if numOut == 1 {
+			numIn := buildT.NumIn()
+			if numIn+numOut == 1 {
+				if numOut == 1 && buildT.Out(0) == cellT {
 					// Handle <func() cellT>
 					for i := 0; i < size; i++ {
 						cells.Index(i).Set(buildV.Call(nil)[0])
 					}
+					goto ok
+				} else if numIn == 1 && buildT.In(0) == reflect.PtrTo(cellT) && numOut == 0 {
+					// Handle <func(&cellT)>
+					args := make([]reflect.Value, 1)
+					for i := 0; i < size; i++ {
+						args[0] = cells.Index(i).Addr()
+						buildV.Call(args)
+					}
+					goto ok
 				}
-				goto ok
-			} else if buildT.NumIn() == 1 && buildT.In(0) == reflect.PtrTo(cellT) && numOut == 0 {
-				// Handle <func(&cellT)>
-				args := make([]reflect.Value, 1)
-				for i := 0; i < size; i++ {
-					args[0] = cells.Index(i).Addr()
-					buildV.Call(args)
-				}
-				goto ok
 			}
-			// FIXME handle init with <func(&cellT, dim1 int...)>
-			// FIXME handle init with <func(dim1 int...) cellT>
-			// make([]reflect.Value, nbDim)
+			// Handle <func(dim1 int...) cellT>
+			if numOut == 1 && numIn == nbDim {
+				ok := true
+				for d := 0; d < nbDim; d++ {
+					if buildT.In(d) != intType {
+						ok = false
+						break
+					}
+				}
+				if ok {
+					lastDim := nbDim - 1
+					// Iterate like a mechanical clock
+					iter := make([]int, nbDim)
+					args := make([]reflect.Value, nbDim)
+					for d := 0; d < nbDim; d++ {
+						args[d] = reflect.ValueOf(&iter[d]).Elem()
+					}
+					for i := 0; i < size; i++ {
+						cells.Index(i).Set(buildV.Call(args)[0])
+
+						iter[lastDim]++
+						if iter[lastDim] == dimensions[lastDim] {
+							for d := lastDim - 1; d >= 0; d-- {
+								iter[d+1] = 0
+								iter[d]++
+								if iter[d] < dimensions[d] {
+									break
+								}
+							}
+						}
+					}
+					goto ok
+				}
+			}
+			// Handle <func(&cellT, dim1 int...)>
+			if numOut == 0 && numIn == nbDim+1 {
+				ok := true
+				for i := 1; i <= nbDim; i++ {
+					if buildT.In(i) != intType {
+						ok = false
+						break
+					}
+				}
+				if ok {
+					lastDim := nbDim - 1
+					// Iterate like a mechanical clock
+					iter := make([]int, nbDim)
+					args := make([]reflect.Value, 1+nbDim)
+					for d := 0; d < nbDim; d++ {
+						args[1+d] = reflect.ValueOf(&iter[d]).Elem()
+					}
+					for i := 0; i < size; i++ {
+						args[0] = cells.Index(i).Addr()
+						buildV.Call(args)
+
+						iter[lastDim]++
+						if iter[lastDim] == dimensions[lastDim] {
+							for d := lastDim - 1; d >= 0; d-- {
+								iter[d+1] = 0
+								iter[d]++
+								if iter[d] < dimensions[d] {
+									break
+								}
+							}
+						}
+					}
+					goto ok
+				}
+			}
 			panic(fmt.Errorf("build function %T is not handled", build))
 		ok:
 		} else {
