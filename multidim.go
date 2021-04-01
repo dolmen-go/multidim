@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package multidim initializes multidimensional slices.
+// Package multidim initializes multidimensional slices.
 //
 // See https://golang.org/doc/effective_go#two_dimensional_slices
 package multidim
